@@ -172,17 +172,70 @@ def create_equation_matrix(x, polynomial_type='сhebyshev_first', polynomial_deg
 def concat_equation_matrices(matrices):
     return np.concatenate(matrices, axis=1)
 
-def save_graph(y, approx, filename='graph.png'):
-    plt.figure(figsize=(20,10))
-    n = np.arange(len(y))
-    plt.plot(n, approx, 'r', n, y, 'b')
-    plt.legend(['наближення', 'цільова функція'])
+def save_graph(plot_vars, var_names, filename='graph.png', y_lim=None, colors=('p', 'b', 'g'), crit=None, warn=None):
+    plt.figure(figsize=(10,6))
+    
+    axes = plt.gca()
+    if y_lim is not None:
+        axes.set_ylim(y_lim)
+    
+    n = np.arange(len(plot_vars[0])) * 10
+    
+    for plot_var, color in zip(plot_vars, colors):
+        plt.plot(n, plot_var, color)
+        
+    if crit is not None:
+        plt.plot(n, [crit] * n.shape[0], 'r')
+        var_names = var_names + ['Критичний рівень']
+        
+    if warn is not None:
+        plt.plot(n, [warn] * n.shape[0], 'r')
+        var_names = var_names + ['Загроза нестабільного стану']
+        
+    plt.legend(var_names)
     plt.savefig(filename, bbox_inches = 'tight')
 
 
-def save_graph_sequence(y, approx, filenames='graph_{0}.png', step=10):
-    for end_point in range(0, y.shape[0] - 1, step):
-        save_graph(y[:end_point], approx[:end_point], filename=filenames.format(end_point // step + 1))
-    graph_amount = (y.shape[0] - 1) // step + 1
-    save_graph(y, approx, filename=filenames.format(graph_amount))
+def save_graph_sequence(
+    plot_vars, var_names, filenames='graph_{0}.png', step=10, y_lim=None, colors=('p', 'b', 'g'), crit=None, warn=None):
+    
+    for end_point in range(0, plot_vars[0].shape[0] - 1, step):
+        save_graph(
+            [plot_var[:end_point] for plot_var in plot_vars], 
+            var_names=var_names,
+            filename=filenames.format(end_point // step + 1), 
+            y_lim=y_lim, colors=colors, crit=crit, warn=warn)
+        
+    graph_amount = (plot_vars[0].shape[0] - 1) // step + 1
+    save_graph(plot_vars, var_names, filename=filenames.format(graph_amount), y_lim=y_lim, colors=colors, crit=crit, warn=warn)
     return graph_amount
+
+
+def calculate_trustworthness(y, approx):
+    return np.max(np.abs(y - approx)) / (max(y.max(), approx.max()) - min(y.min(), approx.min()))
+
+
+def calculate_risk(y, return_max_risk=False):
+    window_size = 8
+    
+    risks = np.empty(3, dtype=np.float32)
+    risks[0] = 0.2 * (1 - y[1][-1] / y[1].max()) + (1 - 0.2) * np.abs((y[0][:1] - y[0][1:])[-window_size:]).max()
+    risks[1] = 1 - y[1][-1] / y[1].max()
+    risks[2] = np.abs((y[2][:1] - y[2][1:])[-window_size:]).max()
+    
+    risks[1] = risks[1] ** 3
+    
+    risk = (1 - np.prod(1 - risks)) ** 0.8
+    if return_max_risk: return (risk, np.argmax(risks))
+    return  risk
+
+def exp_average(x, order=5):
+    coeffs = np.array([np.exp(ind + 1) for ind in range(-order, 0)])
+    coeffs = coeffs / coeffs.sum()
+    
+    size = len(x)
+    x = np.array([x[0]] * (order - 1) + list(x))
+    res = np.empty(size)
+    for ind in range(size):
+        res[ind] = np.dot(x[ind: ind + order], coeffs)
+    return np.array(res)

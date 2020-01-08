@@ -3,6 +3,10 @@ from lab4_backend import *
 import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageTk
+from pathlib import Path
+import os
+import pandas as pd
+pd.set_option('precision', 3)
 
 class LabGUI(tk.Frame):
     
@@ -25,7 +29,6 @@ class LabGUI(tk.Frame):
         self.init_y_coord()
         
         self.init_run_button()
-        self.init_default_checkbutton()
         self.init_y_checkbutton()
         
         self.init_mult()
@@ -33,12 +36,25 @@ class LabGUI(tk.Frame):
         self.init_all_labels()
         self.init_output_label()
         self.init_graph_canvas()
+        self.init_risk_graph_canvas()
         
         self.bind_keyboard()
         
         self.image_ind = 0
         self.image_amount = 0
         
+        self.path = 'graphs'
+        Path(self.path).mkdir(parents=True, exist_ok=True)
+        self.filenames = os.path.join(self.path, 'graph_{0}.png')
+        
+        self.risk_path = 'risk_graphs'
+        Path(self.risk_path).mkdir(parents=True, exist_ok=True)
+        self.risk_filenames = os.path.join(self.risk_path, 'graph_{0}.png')
+        
+        self.trust_path = 'trust_graphs'
+        Path(self.trust_path).mkdir(parents=True, exist_ok=True)
+        self.trust_filenames = os.path.join(self.trust_path, 'graph_{0}.png')
+       
         self.first_run = True
         
     def init_label(self, text, column, row, columnspan=1, rowspan=1, height=1):
@@ -98,15 +114,6 @@ class LabGUI(tk.Frame):
             command=self.run
         )
     
-    
-    def init_default_checkbutton(self):
-        self.default_data = tk.BooleanVar(value=True)
-        
-        self.init_checkbutton(
-            text = 'Стандартні значення', 
-            column=1, row=4,
-            variable=self.default_data
-        )
         
     def init_y_checkbutton(self):
         
@@ -136,8 +143,9 @@ class LabGUI(tk.Frame):
         self.init_label(text = 'Вид', column=6, row=1)
         self.init_label(text = 'Степінь', column=8, row=1)
         
-        self.init_label(text = 'Результат', column=0, row=8, columnspan=6)
-        self.init_label(text = 'Графік', column=7, row=8, columnspan=6)  
+        self.init_label(text = 'Оцінка достовірності датчику', column=0, row=8, columnspan=6)
+        self.init_label(text = 'Оцінка ризику', column=3, row=8, columnspan=7)  
+        self.init_label(text = 'Виміри і прогноз', column=10, row=8, columnspan=6)  
         
         self.err_output = tk.StringVar(value='Значення похибки')
         self.init_variable_label(variable=self.err_output, column=8, row=11, columnspan=6)
@@ -146,17 +154,27 @@ class LabGUI(tk.Frame):
     def init_output_label(self):
         
         self.scrolled_text = ScrolledText(
-            master=self.parent, wrap='word', width=80, height=24, font=('TkDefaultFont', 11))
+            master=self.parent, wrap='word', width=40, height=24, font=('TkDefaultFont', 11))
         
-        self.scrolled_text.grid(column=0, row=10, columnspan=7)
+        self.scrolled_text.grid(column=0, row=10, columnspan=3)
         self.set_output_text('Натисніть на кнопку "Розрахувати"')
         self.scrolled_text.config(state=tk.DISABLED)
     
+    def init_risk_graph_canvas(self):
+        self.risk_canvas_size = (400, 420)
+        self.risk_graph_canvas = tk.Canvas(
+            self.parent, bg="#fff", height=self.risk_canvas_size[1], width=self.risk_canvas_size[0])
+        self.risk_graph_canvas.grid(column=3, row=10, columnspan=7, sticky=tk.NW)
+        
+        self.trust_canvas_size = (400, 420)
+        self.trust_graph_canvas = tk.Canvas(
+            self.parent, bg="#fff", height=self.trust_canvas_size[1], width=self.trust_canvas_size[0])
+        self.trust_graph_canvas.grid(column=0, row=10, columnspan=3, sticky=tk.NW)
     
     def init_graph_canvas(self):
-        self.canvas_size = (700, 420)
+        self.canvas_size = (600, 420)
         self.graph_canvas = tk.Canvas(self.parent, bg="#fff", height=self.canvas_size[1], width=self.canvas_size[0])
-        self.graph_canvas.grid(column=8, row=10, columnspan=6, sticky=tk.NW)
+        self.graph_canvas.grid(column=10, row=10, columnspan=6, sticky=tk.NW)
     
     # RadioButtons   
     
@@ -205,16 +223,16 @@ class LabGUI(tk.Frame):
             variable=self.y_coord)
         
     def init_mult(self):
-        self.init_label(text = 'Модель', column=1, row=5, columnspan=3)
+        self.init_label(text = 'Модель', column=11, row=1, columnspan=3)
         
         self.mult = tk.BooleanVar(value=True)
         
         self.init_radiobutton(
-            text = 'Адитивна', row=6, column=1, columnspan=2, 
+            text = 'Адитивна', row=2, column=11, columnspan=2, 
             value=False, variable=self.mult)
         
         self.init_radiobutton(
-            text = 'Мультиплікативна', row=6, column=2, columnspan=2,
+            text = 'Мультиплікативна', row=2, column=12, columnspan=2,
             value=True, variable=self.mult) 
     
     
@@ -229,6 +247,8 @@ class LabGUI(tk.Frame):
     def update_recursive(self):
         self.image_ind = (self.image_ind + 1) % self.image_amount
         self.graph_canvas.itemconfigure(self.canvas_image, image=self.graph_images[self.image_ind])
+        self.risk_graph_canvas.itemconfigure(self.risk_canvas_image, image=self.risk_graph_images[self.image_ind])
+        self.trust_graph_canvas.itemconfigure(self.trust_canvas_image, image=self.trust_graph_images[self.image_ind])
         self.parent.after(300, self.update_recursive)
     
     
@@ -236,7 +256,17 @@ class LabGUI(tk.Frame):
         
         self.graph_images = [ImageTk.PhotoImage(
             Image.open(
-                'graph_{0}.png'.format(image_ind + 1)).resize(self.canvas_size, Image.ANTIALIAS)) 
+                self.filenames.format(image_ind + 1)).resize(self.canvas_size, Image.ANTIALIAS)) 
+                             for image_ind in range(self.image_amount)]
+        
+        self.risk_graph_images = [ImageTk.PhotoImage(
+            Image.open(
+                self.risk_filenames.format(image_ind + 1)).resize(self.risk_canvas_size, Image.ANTIALIAS)) 
+                             for image_ind in range(self.image_amount)]
+        
+        self.trust_graph_images = [ImageTk.PhotoImage(
+            Image.open(
+                self.trust_filenames.format(image_ind + 1)).resize(self.trust_canvas_size, Image.ANTIALIAS)) 
                              for image_ind in range(self.image_amount)]
         
         self.image_ind = 0
@@ -244,9 +274,15 @@ class LabGUI(tk.Frame):
         if self.first_run:
             self.canvas_image = self.graph_canvas.create_image(
                 0, 0, image=self.graph_images[0],  anchor='nw')
+            self.risk_canvas_image = self.risk_graph_canvas.create_image(
+                0, 0, image=self.risk_graph_images[0],  anchor='nw')
+            self.trust_canvas_image = self.trust_graph_canvas.create_image(
+                0, 0, image=self.trust_graph_images[0],  anchor='nw')
             self.update_recursive()
         else:
             self.graph_canvas.itemconfigure(self.canvas_image, image=self.graph_images[0])
+            self.risk_graph_canvas.itemconfigure(self.risk_canvas_image, image=self.risk_graph_images[0])
+        
         
     def bind_keyboard(self):
         def previous_image(event):
@@ -257,7 +293,7 @@ class LabGUI(tk.Frame):
             self.graph_canvas.itemconfigure(self.canvas_image, image=self.graph_images[self.image_ind])
         
         self.bind('<Left>', previous_image)
-        self.bind('<Left>', next_image)
+        self.bind('<Right>', next_image)
     
     
     def add_output(self, inp='', new_line=True):
@@ -290,7 +326,8 @@ class LabGUI(tk.Frame):
         
         mult = self.mult.get()
         polynomial_type = self.polynomial_type.get()
-               
+        
+        y_origin = y
         x = normalize_data(x)
         y, y_norm_values = normalize_data(y, min_max_data = True)
         
@@ -318,30 +355,61 @@ class LabGUI(tk.Frame):
             
         err = np.max(np.abs(forward(A, lambda_matrix, mult=mult) - y_variable))
         
-        '''while err > 0.5:
-            
-            polynomial_degree_values[selected_var - 1] += 1
-            
-            A = create_equation_matrix(
-                x, polynomial_type=polynomial_type, 
-                polynomial_degree=polynomial_degree_values[selected_var - 1])
-
-            A = normalize_data(A)
-            lambda_matrix = solve(A, y_variable, mult=mult)
-
-            err = np.max(np.abs(forward(A, lambda_matrix, mult=mult) - y_variable))
-            
-            
-        for polynomial_degree, value in zip(self.polynomial_degrees, polynomial_degree_values):
-            polynomial_degree.set(value)'''
-        
         approx_values = forward(A, lambda_matrix, mult=mult)
-                
+        
+        trustworthness = np.array(
+            [1] + [calculate_trustworthness(y_variable[:ind], approx_values[:ind]) for ind in range(1, y.shape[0])])
+        
+        risk_total = np.array(
+            [(0., -1), (0., -1)] + [calculate_risk(
+                [y[:ind, var_ind] for var_ind in range(y.shape[1])], return_max_risk=True) for ind in range(2, y.shape[0])])
+        
+        risk = np.array([risk_total_el[0] for risk_total_el in risk_total])
+        
+        risk = exp_average(risk)
+        trustworthness = exp_average(trustworthness)
+        
+        risk_dict = {
+            -1: 'Отсутствует',
+            0: 'Неустойчивое напряжение бортовой сети',
+            1: 'Заканчивается топливо',
+            2: 'Падает напряжение аккумуляторной батареи'
+        }
+        risk_source = [risk_total_el[1] if risk_total_el[0] > 0.1 else -1 for risk_total_el in risk_total]
+        risk_source = [risk_dict[source] for source in risk_source]
+        
+        out_data = {
+            'Напряжение бортовой сети': y_origin[:, 0],
+            'Количество топлива': y_origin[:, 1],
+            'Напряжение аккумуляторной батареи': y_origin[:, 2],
+            'Оценка риска': risk,
+            #'Категория ситуации':,
+            'Источник риска': risk_source
+        }
+        
+        out_df = pd.DataFrame(out_data, index=np.arange(y.shape[0]) * 10)
+        out_df.to_csv(path_or_buf='output.csv', encoding='utf-8-sig')
+        
         if not self.normalize_y.get():
             y_variable = denormalize_data(y_variable, norm_values)
             approx_values = denormalize_data(approx_values, norm_values)
+                
+        self.image_amount = save_graph_sequence(
+            plot_vars=[approx_values, y_variable], 
+            var_names=['Прогноз', 'Реальні значення'], 
+            filenames=self.filenames, step=100, colors=('b', 'g')) 
         
-        self.image_amount = save_graph_sequence(y_variable, approx_values, step=100) 
+        save_graph_sequence(
+            plot_vars=[risk], 
+            var_names=['Оцінка ризику'], 
+            filenames=self.risk_filenames, 
+            step=100, y_lim=[-0.05, 1.05], colors=('b',), crit=0.8, warn=0.4) 
+        
+        save_graph_sequence(
+            plot_vars=[trustworthness], 
+            var_names=['Оцінка достовірності датчика'], 
+            filenames=self.trust_filenames, step=100, y_lim=[-0.05, 1.05], colors=('y',), crit=o.5) 
+        
         self.update_graph()
         
         err_value = np.max(np.abs(y_variable - approx_values))
