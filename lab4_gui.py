@@ -8,6 +8,7 @@ import os
 import pandas as pd
 pd.set_option('precision', 3)
 
+
 class LabGUI(tk.Frame):
     
     def __init__(self, parent):
@@ -408,7 +409,7 @@ class LabGUI(tk.Frame):
         save_graph_sequence(
             plot_vars=[trustworthness], 
             var_names=['Оцінка достовірності датчика'], 
-            filenames=self.trust_filenames, step=100, y_lim=[-0.05, 1.05], colors=('y',), crit=o.5) 
+            filenames=self.trust_filenames, step=100, y_lim=[-0.05, 1.05], colors=('y',), crit=0.5) 
         
         self.update_graph()
         

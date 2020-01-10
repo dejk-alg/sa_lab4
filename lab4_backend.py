@@ -189,7 +189,7 @@ def save_graph(plot_vars, var_names, filename='graph.png', y_lim=None, colors=('
         var_names = var_names + ['Критичний рівень']
         
     if warn is not None:
-        plt.plot(n, [warn] * n.shape[0], 'r')
+        plt.plot(n, [warn] * n.shape[0], 'y')
         var_names = var_names + ['Загроза нестабільного стану']
         
     plt.legend(var_names)
